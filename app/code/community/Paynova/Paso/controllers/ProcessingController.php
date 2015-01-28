@@ -1,0 +1,443 @@
+<?php
+/*
+ * This file is part of the Paynova Aero Magento Payment Module, which enables the use of Paynova within the 
+ * Magento e-commerce platform.
+ *
+ * LK: Payment processing order
+ *
+ * @category    Paynova
+ * @package     Paynova_Paso
+ */
+
+class Paynova_Paso_ProcessingController extends Mage_Core_Controller_Front_Action
+{
+	/**
+     * Get singleton of Checkout Session Model
+     *
+     * @return Mage_Checkout_Model_Session
+     */
+    protected function _getCheckout()
+    {
+        return Mage::getSingleton('checkout/session');
+    }
+    /**
+     * Get singleton of Checkout Session Model
+     *
+     * @return Mage_Checkout_Model_Session
+     */
+    protected function _autoFinalize()
+    {
+        return Mage::getSingleton('checkout/session');
+    }
+
+    /**
+     * Iframe page which submits the payment data to Paynova.
+     */
+    public function placeformAction()
+    {
+       $this->loadLayout();
+       $this->renderLayout();
+    }
+
+    /**
+     * Show orderPlaceRedirect page which contains the Paynova iframe.
+     */
+    public function paymentAction()
+    {
+
+
+        try {
+
+            $session = $this->_getCheckout();
+
+			$order = Mage::getModel('sales/order');
+
+            $paynova_order = Mage::getModel('paso/order');
+
+            $coreOrderObj = new Mage_Sales_Model_Order();
+			$lastIncrementId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
+			$coreOrderObj->loadByIncrementId($lastIncrementId);
+
+            $corePaymentObj = $coreOrderObj->getPayment()->getMethodInstance();
+
+            //Create a "create order" structured array
+
+            $res = $paynova_order->loadByIncrementId($lastIncrementId);
+
+
+			$selectedPaymentId=$corePaymentObj->getSelectedPaymentId();  // get payment id from selected payment.
+			$selectedModelCode=$corePaymentObj->getCode(); 				// get payment code for selected method.
+			$filterSelectedModelCode=str_replace('_','/',$selectedModelCode);
+
+
+
+
+            $order->loadByIncrementId($session->getLastRealOrderId());
+
+            if (!$order->getId()) {
+                Mage::throwException('No order for processing found');
+            }
+
+            $abstractModel=Mage::getModel($filterSelectedModelCode); // create a object for acc class.
+
+
+            // call create order
+
+            $res=$abstractModel->setCurlCall($res, '/orders/create/'); 		// post the initialize payment Json through CURL.
+            Mage::helper('paso')->log($res);
+
+           	if(!$res){
+            	Mage::throwException('Unable to send the request on Paynova server.');
+           	}else if(!isset($res->orderId)){
+                Mage::throwException('Unable to send the request on Paynova server.'.$res->status->statusMessage);
+            }
+
+
+
+            $paynova_order_nr = $res->orderId;
+            $paynova_status_key = $res->status->statusKey;
+            $order->setState(Mage_Sales_Model_Order::STATE_PENDING_PAYMENT, Mage_Sales_Model_Order::STATE_PENDING_PAYMENT,
+                Mage::helper('paso')->__('Order created in Paynova')
+            );
+
+
+            $res = $paynova_order->createInitializePaymentCall($order, $paynova_order_nr, $selectedPaymentId, $selectedModelCode);
+
+            //Call Initialize payment
+            $output=$abstractModel->setCurlCall($res, '/orders/'.$res['orderId'].'/initializePayment');
+
+
+
+           	$redirectURL= $abstractModel->getResponseFromInitialPaymentCall($output); // recieved the response from paynova.
+            $order->setState(Mage_Sales_Model_Order::STATE_PENDING_PAYMENT, Mage_Sales_Model_Order::STATE_PENDING_PAYMENT,
+                Mage::helper('paso')->__('Redirected to Paynova.')
+            );
+
+            $order->save();
+
+            $session->setPaynovaQuoteId($session->getQuoteId());
+            $session->setPaynovaRealOrderId($session->getLastRealOrderId());
+            $session = $this->_getCheckout();
+            $lastQuoteId = $session->getLastQuoteId();
+            Mage::getModel('sales/quote')->load($lastQuoteId)->setIsActive(true)->save();
+            $session->clear();
+
+            @header("Location: $redirectURL"); // Redirect browser.
+            die();
+
+            $this->loadLayout(); //todo check if lines should be removed
+            $this->renderLayout();
+        }catch (Mage_Core_Exception $e) {
+        	$order->addStatusToHistory($order->getStatus(), $e->getMessage());   // try to save the exception with the current order.
+            $this->_getCheckout()->addError('We are sorry, but an error occurred while attempting to process your payment.');
+            parent::_redirect('checkout/cart');
+        }catch (Exception $e){
+        	$this->_getCheckout()->addError($e->getMessage());
+            Mage::logException($e);
+            parent::_redirect('checkout/cart');
+        }
+    }
+
+    /**
+     * Action to which the customer will be returned when the payment is made.
+     */
+    public function successAction()
+    {
+
+        $body = $this->getRequest()->getParams();
+        $capture=Mage::getStoreConfig('paso/settings/autofinalize');
+
+        $session = $this->_getCheckout();
+
+        Mage::helper('paso')->log($body);
+
+        $order_id = $session->getLastRealOrderId();
+
+        $event = Mage::getModel('paso/event')
+                 ->setEventData($body);
+
+        $order = Mage::getModel('sales/order');
+
+        $order->loadByIncrementId($body['ORDER_NUMBER']);
+
+
+        if (!$order->getId()) {
+            Mage::throwException('No order for processing found');
+        }
+
+        if($order->getState() == 'pending_payment') {
+            $order->addStatusHistoryComment(Mage::helper('paso')->__('Successfully returned from Paynova'));
+
+        }else{
+                Mage::helper('paso')->__('POST was not first exiting');
+	            //todo check state of order before sending to success
+
+                $order->save();
+                $this->_redirect('checkout/onepage/success', array('order_ids' => array($order_id)));
+                return;
+
+
+        }
+
+        $order->save();
+
+
+        try {
+
+            $quoteId = $event->successEvent();
+            $this->_getCheckout()->setLastSuccessQuoteId($quoteId);
+
+            $order->save();
+            if($capture){
+
+
+                $coreOrderObj = new Mage_Sales_Model_Order();
+                $lastIncrementId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
+
+                $coreOrderObj->loadByIncrementId($lastIncrementId);
+
+                $corePaymentObj = $coreOrderObj->getPayment()->getMethodInstance();
+
+
+                $selectedModelCode=$corePaymentObj->getCode(); 				// get payment code for selected method.
+                $filterSelectedModelCode=str_replace('_','/',$selectedModelCode);
+
+                $abstractModel=Mage::getModel($filterSelectedModelCode); // create a object for acc class.
+
+                $err = $abstractModel->invoicing($order);
+
+
+                $order->save();
+
+                if($err){
+                    foreach( Mage::getSingleton('checkout/session')->getQuote()->getItemsCollection() as $item ){
+
+                        Mage::getSingleton('checkout/cart')->removeItem( $item->getId() )->save();
+                    }
+                    $this->_redirect('checkout/onepage/success', array('order_ids' => array($order_id)));
+                    return;
+                }
+
+            }
+            foreach( Mage::getSingleton('checkout/session')->getQuote()->getItemsCollection() as $item ){
+
+                Mage::getSingleton('checkout/cart')->removeItem( $item->getId() )->save();
+            }
+
+            $this->_redirect('checkout/onepage/success');
+            return;
+        } catch (Mage_Core_Exception $e) {
+
+            $this->_getCheckout()->addError($e->getMessage());
+        } catch(Exception $e) {
+
+            Mage::logException($e);
+        }
+
+        $this->_redirect('checkout/onepage');
+
+    }
+
+    /**
+     * Action to which the customer will be returned if the payment process is
+     * cancelled.
+     * Cancel order and redirect user to the shopping cart.
+     */
+    public function cancelAction()
+    {	
+    	$event = Mage::getModel('paso/event')
+                 ->setEventData($this->getRequest()->getParams());
+        $message = $event->cancelEvent();
+
+        // set quote to active
+        $session = $this->_getCheckout();
+        if ($quoteId = $session->getPaynovaQuoteId()) {
+            $quote = Mage::getModel('sales/quote')->load($quoteId);
+            if ($quote->getId()) {
+                $quote->setIsActive(true)->save();
+                $session->setQuoteId($quoteId);
+            }
+        }
+
+        $session->addError($message);
+
+        $this->_redirect('checkout/onepage');
+    }
+
+    public function callbackAction()
+    {
+
+        $auto_capture = Mage::getStoreConfig('paso/settings/autofinalize');
+
+        /*
+         * todo  print some details about payment method to log
+         *
+         * todo R2 Check for event_type before going into authorize flow
+         */
+        $body = $this->getRequest()->getParams();
+
+        $session = $this->_getCheckout();
+
+        /*
+         * print event to status
+         */
+
+
+        /*
+         * todo move to event to process data and return nicer
+         */
+        if(!isset($body)){
+            return;
+        }
+        if(!is_array($body)) {
+            $my_arr = explode('&', $body);
+
+            foreach ($my_arr as $id => $data) {
+                $val = explode('=', $data);
+
+                $key = $val[0];
+                $value = $val[1];
+
+            }
+            $body[$key] = $value;
+        }
+        $order_id = $body['ORDER_NUMBER'];
+
+        sleep(5);
+        $order = Mage::getModel('sales/order');
+        $order->loadByIncrementId($order_id);
+
+
+        if($body['EVENT_TYPE'] == 'SESSION_END'){
+        Mage::helper('paso')->log('CALLBACK: SESSION END');
+
+        exit;
+        }
+
+        if($body['EVENT_TYPE'] == 'PAYMENT'){
+            Mage::helper('paso')->log('CALLBACK: PAYMENT');
+            $order->save();
+
+        }
+
+        if($order->getState() == 'pending_payment') {
+            Mage::helper('paso')->log('CALLBACK: FIRST');
+            $order->save();
+
+        }else{
+            Mage::helper('paso')->log('CALLBACK: NOT FIRST');
+            $order->save();
+            return;
+            exit;
+        }
+
+
+        $order->save();
+        exit;
+        $event = Mage::getModel('paso/event')
+            ->setEventData($body);
+
+        $order->save();
+
+        Mage::helper('paso')->log('trying to process');
+        try {
+
+            $quoteId = $event->successEvent();
+
+            Mage::helper('paso')->log('starting to process');
+            $order->save();
+
+            $this->_getCheckout()->setLastSuccessQuoteId($quoteId);
+
+            $order->save();
+
+            if($auto_capture){
+                Mage::helper('paso')->log('trying to capture');
+                $payment = $order->getPayment();
+                $amount = $body['PAYMENT_1_AMOUNT'];
+
+                $coreOrderObj = new Mage_Sales_Model_Order();
+                $lastIncrementId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
+
+                $coreOrderObj->loadByIncrementId($lastIncrementId);
+
+                $corePaymentObj = $coreOrderObj->getPayment()->getMethodInstance();
+
+                $selectedPaymentId=$corePaymentObj->getSelectedPaymentId();  // get payment id from selected payment.
+                $selectedModelCode=$corePaymentObj->getCode(); 				// get payment code for selected method.
+                $filterSelectedModelCode=str_replace('_','/',$selectedModelCode);
+
+                $abstractModel=Mage::getModel($filterSelectedModelCode); // create a object for acc class.
+
+                $err = $abstractModel->invoicing($order);
+
+                $res_capture = $abstractModel->capture($payment, $amount, $body['PAYMENT_1_TRANSACTION_ID']);
+                $order->save();
+
+                if($res_capture){
+                    foreach( Mage::getSingleton('checkout/session')->getQuote()->getItemsCollection() as $item ){
+
+                        Mage::getSingleton('checkout/cart')->removeItem( $item->getId() )->save();
+                    }
+                    $this->_redirect('checkout/onepage/success', array('order_ids' => array($order_id)));
+                    return;
+                }
+
+            }
+            foreach( Mage::getSingleton('checkout/session')->getQuote()->getItemsCollection() as $item ){
+
+                Mage::getSingleton('checkout/cart')->removeItem( $item->getId() )->save();
+            }
+
+
+            return;
+        } catch (Mage_Core_Exception $e) {
+
+            $this->_getCheckout()->addError($e->getMessage());
+        } catch(Exception $e) {
+
+            Mage::logException($e);
+        }
+
+        $this->_redirect('checkout/cart');
+    }
+
+    public function pendingAction()
+    {
+        // Get the raw request body.
+        $body = $this->getRequest()->getRawBody();
+        $session = $this->_getCheckout();
+
+
+        exit;
+
+
+    }
+
+    /**
+     * Action to which the transaction details will be posted after the payment
+     * process is complete.
+     */
+    public function statusAction()
+    {
+
+    }
+
+    /**
+     * Set redirect into responce. This has to be encapsulated in an JavaScript
+     * call to jump out of the iframe.
+     *
+     * @param string $path
+     * @param array $arguments
+     */
+    protected function _redirect($path, $arguments=array())
+    {
+        $this->getResponse()->setBody(
+            $this->getLayout()
+                ->createBlock('paso/redirect')
+                ->setRedirectUrl(Mage::getUrl($path, $arguments))
+                ->toHtml()
+        );
+        return $this;
+    }   
+}

@@ -1,0 +1,13 @@
+<?php
+/*
+ * This file is part of the Paynova Paso Magento Payment Module, which enables the use of Paynova within the 
+ * Magento e-commerce platform.
+ *
+ * @category    Paynova
+ * @package     Paynova_Paso
+ */
+?>
+<?php echo $this->getMethod()->getTitle() ?>
+    {{pdf_row_separator}}
+<?php echo Mage::helper('paso')->__('Paynova Transaction ID: %s', $this->htmlEscape($this->getInfo()->getLastTransId())) ?>
+    {{pdf_row_separator}}

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!--
+/*
+ * This file is part of the Paynova Paso Magento Payment Module, which enables the use of Paynova within the
+ * Magento e-commerce platform.
+ *
+ * @category    Paynova
+ * @package     Paynova_Paso
+ */
+-->
+<config>
+    <modules>
+        <Paynova_Paso>
+            <active>true</active>
+            <codePool>community</codePool>
+        </Paynova_Paso>
+    </modules>
+</config>
