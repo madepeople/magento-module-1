@@ -11,6 +11,7 @@ This is Paynova's payment module for Magento. The module supports Magento 1.7 - 
   * Swedish/Finnish/Danish banks
   * iDEAL
   * Überweisung (Germany)
+* Invoice/installments
   
 ## Download & installation
 
