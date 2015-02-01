@@ -1,7 +1,6 @@
-# magento-module
-Paynova Magento payment module
+![Paynova logo](/../screenshots/paynova_logo_c0392b_50px.png?raw=true "Paynova logo")
 
-## Version 1.0
+# Magento Payment Module v1.0
 
 > This is Paynova's payment module for Magento. The module supports Magento 1.7 - 1.9. and is tested in Magento 1.9.1.0.
 > <hr>
@@ -34,6 +33,7 @@ Note: We recommend that you backup your database before installing new modules.
 
 1. Log in to Magento admin and clear all caches and re-index the store.
 2. Activate the module under `System -> Configuration -> Sales | Paynova`
+![admin sales paynova](/../screenshots/admin-sales-paynova.png?raw=true "admin sales paynova")
 3. Enter the account information you have received from Paynova Merchant Support (merchant id, password, secret key, API url). 
 4. Activate the desired payment methods.
 5. (optional) Activate logging in the Magento admin `System -> Configuration -> Advanced | Developer`.
