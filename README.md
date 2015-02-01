@@ -33,7 +33,8 @@ Note: We recommend that you backup your database before installing new modules.
 
 1. Log in to Magento admin and clear all caches and re-index the store.
 2. Activate the module under `System -> Configuration -> Sales | Paynova`
-![admin sales paynova](/../screenshots/admin-sales-paynova.png?raw=true "admin sales paynova")
+
+   ![admin sales paynova](/../screenshots/admin-sales-paynova.png?raw=true "admin sales paynova")
 3. Enter the account information you have received from Paynova Merchant Support (merchant id, password, secret key, API url). 
 4. Activate the desired payment methods.
 5. (optional) Activate logging in the Magento admin `System -> Configuration -> Advanced | Developer`.
