@@ -5,6 +5,15 @@ Paynova Magento payment module
 
 This is Paynova's payment module for Magento. The module supports Magento 1.7 - 1.9. and is tested in Magento 1.9.1.0.
 
+<!-- MarkdownTOC depth=2 autolink=true bracket=round -->
+
+- [Supported payment methods](#supported-payment-methods)
+- [Download & installation](#download--installation)
+- [Configuration](#configuration)
+
+<!-- /MarkdownTOC -->
+
+
 ## Supported payment methods
 * Credit/debit cards
 * Real-time bank transfer
