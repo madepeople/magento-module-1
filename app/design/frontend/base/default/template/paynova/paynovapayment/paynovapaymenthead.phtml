@@ -1,0 +1,21 @@
+<script type="text/javascript">
+    Validation.add('validate-paynova-paynovapayment-governmentid', '<?php echo Mage::Helper("paynovapayment")->__("Social security number does not validate")?>', function(v) {
+        if (paynova_paynovapayment_validategovernmentid(v)) {
+            return true;
+        }
+        return false;
+    });
+    Validation.add('validate-paynova-paynovapayment-output', '<?php echo Mage::Helper("paynovapayment")->__("Error or missing output!")?>', function() {
+        if (paynova_paynovapayment_validateoutput()) {
+            return true;
+        }
+        return false;
+    });
+
+    var paynova_paynovapayment_getOrderEmailUrl = '<?php echo Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB).'index.php/paynovapayment/index/getEmail'?>';
+    var paynova_paynovapayment_getAddressUrl = '<?php echo Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB).'index.php/paynovapayment/index/getAddress'?>';
+    var paynova_paynovapayment_getPayMethodsUrl = '<?php echo Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB).'index.php/paynovapayment/index/getPaymentMethods'?>';
+    var paynova_paynovapayment_govermentInvalidtxt = '<?php echo Mage::Helper("paynovapayment")->__("Social security number does not validate")?>';
+    var paynova_paynovapayment_invoicetxt = '<?php echo Mage::helper('paynovapayment')->__('Invoice will be sent to') ?>';
+    var paynova_paynovapayment_waittxt = '<?php echo Mage::helper('paynovapayment')->__('Please wait') ?>';
+</script>

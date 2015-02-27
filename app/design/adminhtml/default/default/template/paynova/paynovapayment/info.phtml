@@ -1,0 +1,16 @@
+<?php
+/*
+ * This file is part of the Paynova paynovapayment Magento Payment Module, which enables the use of Paynova within the
+ * Magento e-commerce platform.
+ *
+ *
+ * @category    Paynova
+ * @package     Paynova_paynovapayment
+ */
+?>
+<?php echo $this->htmlEscape($this->getMethod()->getTitle()) ?><br />
+<?php if ($this->getInfo()->getLastTransId() == ''): ?>
+    <?php echo Mage::helper('paynovapayment')->__('Payment has not been processed yet.') ?><br />
+<?php else: ?>
+    <?php echo Mage::helper('paynovapayment')->__('Paynova Transaction ID: %s', $this->htmlEscape($this->getInfo()->getLastTransId())) ?><br />
+<?php endif; ?>

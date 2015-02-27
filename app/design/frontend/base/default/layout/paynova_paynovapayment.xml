@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<!--
+/*
+ * This file is part of the Paynova Paynovapayment Magento Payment Module, which enables the use of Paynova within the
+ * Magento e-commerce platform.
+ *
+ * Copyright (C) 2015  Paynova AB
+ * 
+ * This module is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @category    Paynova
+ * @package     Paynova_Paynovapayment
+ */
+
+-->
+<layout version="0.1.0">
+    <paynovapayment_processing_payment>
+        <reference name="root">
+            <action method="setTemplate"><template>page/1column.phtml</template></action>
+        </reference>
+        <reference name="content">
+            <block type="paynovapayment/payment" name="paynovapayment_payment" template="paynova/paynovapayment/payment.phtml" />
+        </reference>
+    </paynovapayment_processing_payment>
+
+    <paynovapayment_processing_placeform>
+        <reference name="root">
+            <action method="setTemplate"><template>paynovapayment/blank.phtml</template></action>
+        </reference>
+        <reference name="content">
+            <block type="paynovapayment/placeform" name="paynovapayment_placeform" template="paynova/paynovapayment/placeform.phtml" />
+        </reference>
+    </paynovapayment_processing_placeform>
+
+
+    <checkout_onepage_index>
+        <reference name="head">
+            <action method="addJs"><script>paynova/paynovapayment/jquery-1.11.1.min.js</script></action>
+            <action method="addJs"><script>paynova/paynovapayment/paynovapayment.js</script></action>
+            <block type="page/html" name="paynovapaymenthead_script" template="paynova/paynovapayment/paynovapaymenthead.phtml" />
+        </reference>
+    </checkout_onepage_index>
+
+    <onestepcheckout_index_index>
+        <reference name="head">
+            <action method="addJs"><script>paynova/paynovapayment/jquery-1.11.1.min.js</script></action>
+            <action method="addJs"><script>paynova/paynovapayment/paynovapayment.js</script></action>
+            <block type="page/html" name="paynovapaymenthead_script" template="paynova/paynovapayment/paynovapaymenthead.phtml" />
+        </reference>
+    </onestepcheckout_index_index>
+
+    <firecheckout_index_index>
+        <reference name="head">
+            <action method="addJs"><script>paynova/paynovapayment/jquery-1.11.1.min.js</script></action>
+            <action method="addJs"><script>paynova/paynovapayment/paynovapayment.js</script></action>
+            <block type="page/html" name="paynovapaymenthead_script" template="paynova/paynovapayment/paynovapaymenthead.phtml" />
+        </reference>
+    </firecheckout_index_index>
+</layout>

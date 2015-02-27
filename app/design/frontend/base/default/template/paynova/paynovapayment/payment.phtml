@@ -1,0 +1,37 @@
+<?php
+/*
+ * This file is part of the Paynova Aero Magento Payment Module, which enables the use of Paynova within the 
+ * Magento e-commerce platform.
+ *
+ * Copyright (C) 2015  Paynova AB
+ * 
+ * This module is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @category    Paynova
+ * @package     Paynova_Aero
+ */
+?>
+<div class="page-head">
+    <h3><?php echo Mage::helper('paynovapayment')->__('Please pay your order now') ?></h3>
+</div>
+<table style="width:100%;">
+    <tr>
+        <td style="width:75%">
+            <iframe style="width:100%; height:600px;" src="<?php echo Mage::getUrl('paynovapayment/processing/placeform') ?>"></iframe>
+        </td>
+        <td style="text-align:center;">
+            <img src="<?php echo $this->getPaynovaLogoSrc() ?>" title="<?php echo Mage::helper('paynovapayment')->__('Powered by Paynova') ?>" alt="<?php echo Mage::helper('paynovapayment')->__('Powered by Paynova') ?>" />
+        </td>
+    </tr>
+</table>

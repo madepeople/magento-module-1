@@ -1,0 +1,57 @@
+<?php
+/*
+ * This file is part of the Paynova Aero Magento Payment Module, which enables the use of Paynova within the 
+ * Magento e-commerce platform.
+ *
+ * Copyright (C) 2015  Paynova AB
+ * 
+ * This module is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @category    Paynova
+ * @package     Paynova_Aero
+ */
+?>
+<?php $_code = $this->getMethodCode();?>
+
+<ul class="form-list paynova_paynovapaymentmethod_<?php echo $_code ?>" id="payment_form_<?php echo $_code ?>"  style="display:none">
+    <li>
+        <span id="paynova_paynovapayment_installment_paymentmethodsoutput"></span><br>
+        <span id="paynova_paynovapayment_installment_installmenttext"></span><br>
+        <span id="paynova_paynovapayment_installment_paymentmethodseerror"></span>
+        <?php echo Mage::helper('paynovapayment')->__('Enter social security no.') ?><br/><input type="text" name="payment[paynova_paynovapayment_installment_governmentid]" placeholder="YYYYMMDD-XXXX" id="paynova_paynovapayment_installment_governmentid" maxlength="13" size="13" class="input-text required-entry validate-paynova-paynovapayment-installment-governmentid validate-paynova-paynovapayment-installment-output" autocomplete="off" />
+        <input type="button" class="button" id="paynovapayment_continue"  name="paynovapayment_continue" value="<?php echo Mage::helper('paynovapayment')->__('Continue') ?>" onclick="paynova_paynovapayment_installment_getAddress(document.getElementById('paynova_paynovapayment_installment_governmentid').value)"  />
+        <br/>
+        <span id="paynova_paynovapayment_installment_installmentoptiontext"><?php echo Mage::helper('paynovapayment')->__('') ?></span>
+
+        <span id="paynova_paynovapayment_installment_error"></span>
+
+        <span id="paynova_paynovapayment_installment_output"></span>
+
+        <span id="paynova_paynovapayment_installment_orderemail"></span>
+
+        <span id="paynova_paynovapayment_installment_terms"  style="display:none;"><a href="http://www.paynova.com" class="paynova-paynovapayment-installment-terms-link" id="paynova_paynovapayment_installment_terms_link"><?php echo Mage::helper('paynovapayment')->__('Terms for installment option')?></a></span>
+        <br/>
+
+        <?php
+            $currentUrl = Mage::helper('core/url')->getCurrentUrl();
+            if (!$currentUrl) {
+                $currentUrl = "";
+            }
+        ?>
+            <input type="hidden" value="<?php echo $currentUrl; ?>" name="payment[paynova_paynovapayment_checkoutpath]"/>
+        <script>
+            paynova_paynovapayment_getPaymentMethods();
+        </script>
+    </li>
+</ul>

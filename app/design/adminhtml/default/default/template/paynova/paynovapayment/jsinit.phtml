@@ -1,0 +1,28 @@
+<?php
+/*
+ * This file is part of the Paynova Paynovapayment Magento Payment Module, which enables the use of Paynova within the
+ * Magento e-commerce platform.
+ *
+ *
+ *
+ * @category    Paynova
+ * @package     Paynova_Paynovapayment
+ */
+?>
+
+<script type="text/javascript">
+//<![CDATA[
+    function initPaynova() {
+        if (!document.getElementById("paynova_settings_activationstatus")) {
+            // Don't perform for website and store view
+            return;
+        }
+        document.getElementById("paynova_settings_activationstatus").style.display = "none";
+        $('paynova_settings_activationstatus').up().insert('<button type="button" id="paynova_multifuncbutton" onclick="paynova.button()" style="display: none; margin-top: 1em;"><span id="paynova_multifuncbutton_label" style="display:block; margin-top:1em;"></span></button>');
+        $('paynova_settings_activationstatus').up().insert('<span id="paynova_inf_div" style="display:block; margin-top:1em;"></span>');
+        $('paynova_settings_activationstatus').up().insert('<input id="paynova_settings_customer_id_hidden" type="hidden"/>');
+        paynova = new Paynova('<?php echo $this->getSkinUrl('images/paynovapayment/banner.jpg'); ?>', '<?php echo $this->getUrl('*/paynovapayment/activateemail'); ?>', '<?php echo $this->getUrl('*/paynovapayment/checksecret'); ?>', '<?php echo $this->getUrl('*/paynovapayment/checkemail');?>');
+    }
+//]]>
+</script>
+
