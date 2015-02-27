@@ -190,20 +190,21 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
             $linenumber++;
         }
 
-        if ($order->getShippingAmount()>0) {
-            $itemId++;
-            $res['lineItems'][$itemId]['id'] = $linenumber;
-            $res['lineItems'][$itemId]['articleNumber'] =  substr($shippingsku,0,50);
-            $res['lineItems'][$itemId]['name'] = $shippingname;
-            $res['lineItems'][$itemId]['quantity'] = 1;
-            $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
-            $res['lineItems'][$itemId]['unitAmountExcludingTax'] = $order->getShippingAmount()-$order->getShippingTaxAmount();
-            $res['lineItems'][$itemId]['taxPercent'] = 100 * $order->getShippingTaxAmount() / $order->getShippingAmount();
-            $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($order->getShippingTaxAmount(),2);
-            $res['lineItems'][$itemId]['totalLineAmount'] =  round($order->getShippingAmount(),2);
-            $res['lineItems'][$itemId]['description'] =  $description;
-            $res['lineItems'][$itemId]['productUrl'] =  $productUrl;
-        }
+        if ($order->getShippingAmount() AND $order->getShippingAmount()>0) {
+                $itemId++;
+                $linenumber++;
+                $res['lineItems'][$itemId]['id'] = $linenumber;
+                $res['lineItems'][$itemId]['articleNumber'] =  substr($shippingsku,0,50);
+                $res['lineItems'][$itemId]['name'] = $shippingname;
+                $res['lineItems'][$itemId]['quantity'] = 1;
+                $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
+                $res['lineItems'][$itemId]['unitAmountExcludingTax'] =  round($order->getShippingAmount(),2);
+                $res['lineItems'][$itemId]['taxPercent'] = $this->getShippingTaxPercentFromQuote($quote);
+                $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($order->getShippingTaxAmount(),2);
+                $res['lineItems'][$itemId]['totalLineAmount'] =  round($order->getShippingInclTax(),2);
+                $res['lineItems'][$itemId]['description'] =  $description;
+                $res['lineItems'][$itemId]['productUrl'] =  $productUrl;
+            }
 
         $res['orderDescription'] =  Mage::helper('paynovapayment')->__('Order for store: ').Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);
 
@@ -317,17 +318,22 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
 
             $i++;
         }
-        if ($order->getShippingAmount()>0) {
+        if ($order->getShippingAmount() AND $order->getShippingAmount()>0) {
+            //load quote
+            $quoteid = $order->getQuoteId();
+            $quote = Mage::getModel('sales/quote')->load($quoteid);
+
             $itemId++;
-            $res['lineItems'][$itemId]['id'] = $i;
-            $res['lineItems'][$itemId]['articleNumber'] = $shippingsku;
+            $linenumber++;
+            $res['lineItems'][$itemId]['id'] = $linenumber;
+            $res['lineItems'][$itemId]['articleNumber'] =  substr($shippingsku,0,50);
             $res['lineItems'][$itemId]['name'] = $shippingname;
             $res['lineItems'][$itemId]['quantity'] = 1;
             $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
-            $res['lineItems'][$itemId]['unitAmountExcludingTax'] = $order->getShippingAmount()-$order->getShippingTaxAmount();
-            $res['lineItems'][$itemId]['taxPercent'] = 100 * $order->getShippingTaxAmount() / $order->getShippingAmount();
+            $res['lineItems'][$itemId]['unitAmountExcludingTax'] =  round($order->getShippingAmount(),2);
+            $res['lineItems'][$itemId]['taxPercent'] = $this->getShippingTaxPercentFromQuote($quote);
             $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($order->getShippingTaxAmount(),2);
-            $res['lineItems'][$itemId]['totalLineAmount'] =  round($order->getShippingAmount(),2);
+            $res['lineItems'][$itemId]['totalLineAmount'] =  round($order->getShippingInclTax(),2);
             $res['lineItems'][$itemId]['description'] =  $description;
             $res['lineItems'][$itemId]['productUrl'] =  $productUrl;
         }
@@ -471,5 +477,16 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
         return $res;
     }
 
+    public function getShippingTaxPercentFromQuote($quote){
+        
+            
+            $store = $quote->getStore();
+            $taxCalculation = Mage::getModel('tax/calculation');
+            $request = $taxCalculation->getRateRequest(null, null, null, $store);
+            $taxRateId = Mage::getStoreConfig('tax/classes/shipping_tax_class', $store);
+            
+            //taxRateId is the same model id as product tax classes, so you can do this:
+            return $taxCalculation->getRate($request->setProductClassId($taxRateId));
+    }
 
 }

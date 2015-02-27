@@ -218,7 +218,6 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
             $order->addStatusToHistory($order->getStatus(), $e->getMessage());   // try to save the exception with the current order.
             $this->_getCheckout()->addError('We are sorry, but an error occurred while attempting to process your payment.');
             $order->save();
-            exit;
             parent::_redirect('checkout/cart');
         }catch (Exception $e){
         	$this->_getCheckout()->addError($e->getMessage());
