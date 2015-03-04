@@ -64,121 +64,59 @@ abstract class Paynova_Paynovapayment_Model_Abstract extends Mage_Payment_Model_
      */
     public function setCurlCall($data, $address, $method = 'POST'){
 
-        if ($data) {
+        $apiUrl=Mage::getStoreConfig('paynovapayment/settings/api_live_url');
+        $apiTest=Mage::getStoreConfig('paynovapayment/settings/api_test_url');
+        $apiMode=Mage::getStoreConfig('paynovapayment/settings/api_mode');
+        $password=Mage::helper('core')->decrypt(Mage::getStoreConfig('paynovapayment/settings/password'));
+        $username=Mage::getStoreConfig('paynovapayment/settings/merchant_id');
 
-            if ($address) {
-                Mage::helper('paynovapayment')->log($address);
-            }
+        $paynova_url = $apiUrl;
+        if($apiMode!='1') {
+            $paynova_url = $apiTest;
+        }
 
+        //check if https:// or http:// exist in URL.
+        $prot_sec = "https://";
+        $prot_uns = "http://";
 
-            $data = json_encode($data);
-            Mage::helper('paynovapayment')->log($data);
-            $apiUrl=Mage::getStoreConfig('paynovapayment/settings/api_live_url');
-            $apiTest=Mage::getStoreConfig('paynovapayment/settings/api_test_url');
-            $apiMode=Mage::getStoreConfig('paynovapayment/settings/api_mode');
-            $password=Mage::helper('core')->decrypt(Mage::getStoreConfig('paynovapayment/settings/password'));
-            $username=Mage::getStoreConfig('paynovapayment/settings/merchant_id');
-
-
-            $paynova_url = $apiUrl;
-            if($apiMode!='1') {
-                $paynova_url = $apiTest;
-            }
-
-            //check if https:// or http:// exist in URL.
-            $prot_sec = "https://";
-            $prot_uns = "http://";
-
-            $pos = stripos($paynova_url, $prot_sec);
+        $pos = stripos($paynova_url, $prot_sec);
+        if ($pos === false) {
+            $pos = stripos($paynova_url, $prot_uns);
             if ($pos === false) {
-                $pos = stripos($paynova_url, $prot_uns);
-                if ($pos === false) {
-                    $paynova_url = $prot_sec.$paynova_url;
-                } else if ($pos>0){
-                    $paynova_url = $prot_sec.$paynova_url;
-                }
+                $paynova_url = $prot_sec.$paynova_url;
             } else if ($pos>0){
                 $paynova_url = $prot_sec.$paynova_url;
             }
+        } else if ($pos>0){
+            $paynova_url = $prot_sec.$paynova_url;
+        }
 
-
-
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "$paynova_url$address");
-            curl_setopt($ch, CURLOPT_USERPWD, "$username:$password");
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-            if($method == 'POST') {
-                curl_setopt($ch, CURLOPT_POST, 1);
-            }
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json')); //
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-
-            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-            $output = curl_exec($ch);
-            Mage::helper('paynovapayment')->log(json_decode($output));
-
-            curl_close($ch);
-            return json_decode($output);
-        }else {
-
-            Mage::helper('paynovapayment')->log($address);
-            Mage::helper('paynovapayment')->log($data);
-            $data = json_encode($data);
-
-            $apiUrl=Mage::getStoreConfig('paynovapayment/settings/api_live_url');
-            $apiTest=Mage::getStoreConfig('paynovapayment/settings/api_test_url');
-            $apiMode=Mage::getStoreConfig('paynovapayment/settings/api_mode');
-            $password=Mage::helper('core')->decrypt(Mage::getStoreConfig('paynovapayment/settings/password'));
-            $username=Mage::getStoreConfig('paynovapayment/settings/merchant_id');
-
-
-            $paynova_url = $apiUrl;
-            if($apiMode!='1') {
-                $paynova_url = $apiTest;
-            }
-
-            //check if https:// or http:// exist in URL.
-            $prot_sec = "https://";
-            $prot_uns = "http://";
-
-            $pos = stripos($paynova_url, $prot_sec);
-            if ($pos === false) {
-                $pos = stripos($paynova_url, $prot_uns);
-                if ($pos === false) {
-                    $paynova_url = $prot_sec.$paynova_url;
-                } else if ($pos>0){
-                    $paynova_url = $prot_sec.$paynova_url;
-                }
-            } else if ($pos>0){
-                $paynova_url = $prot_sec.$paynova_url;
-            }
-
-
-
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "$paynova_url$address");
-            curl_setopt($ch, CURLOPT_USERPWD, "$username:$password");
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-            if($method == 'POST') {
-                curl_setopt($ch, CURLOPT_POST, 1);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "$paynova_url$address");
+        curl_setopt($ch, CURLOPT_USERPWD, "$username:$password");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        if($method == 'POST') {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            if ($data) {
+                $data = json_encode($data);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             }
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json')); //
 
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-
-            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-            $output = curl_exec($ch);
-            Mage::helper('paynovapayment')->log(json_decode($output));
-
-            curl_close($ch);
-            return json_decode($output);
         }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json')); //
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        $output = curl_exec($ch);
+        curl_close($ch);
+
+        Mage::helper('paynovapayment')->log("Curl call to: ".$paynova_url.$address);
+        Mage::helper('paynovapayment')->log($data);
+        if ($address !="/paymentoptions/") {
+            Mage::helper('paynovapayment')->log(json_decode($output));
+        }
+        return json_decode($output);
     }
 
     /**
@@ -293,22 +231,27 @@ abstract class Paynova_Paynovapayment_Model_Abstract extends Mage_Payment_Model_
 
     public function capture(Varien_Object $payment, $amount)
     {
-        $transid = $payment->getLastTransId();
+
+
+        $transaction = Mage::getModel('sales/order_payment_transaction')->getCollection()
+            ->addAttributeToFilter('order_id', array('eq' => $payment->getOrder()->getEntityId()))->getLastItem();
+        $addData = $transaction->getAdditionalInformation(Mage_Sales_Model_Order_Payment_Transaction::RAW_DETAILS);
+        $transid = $addData['transID'];
+
+
         if (empty($transid)) {
-            Mage::getSingleton('core/session')->addError('Missing transaction ID. Can´t send anull order request to Paynova');
+            Mage::getSingleton('core/session')->addError('Missing transaction ID. Can´t send capture order request to Paynova');
             $order = $this->getOrder();
             $order->addStatusHistoryComment(Mage::helper('paynovapayment')->__('No transaction id when trying to capture.'));
             $order->save();
-            $logmsg = "Missing transaction ID from order #".$order->getIncrementId().". Can´t send anull order request to Paynova.";
-            Mage::Helper('paynovapayment')->log($logmsg);
+            $logmsg = "Missing transaction ID from order #".$order->getIncrementId().". Can´t send capture order request to Paynova.";
+
+            Mage::throwException("$logmsg");
+        } else {
+            $payment->setStatus(self::STATUS_APPROVED)
+                ->setTransactionId($transid)
+                ->setIsTransactionClosed(0);
         }
-
-
-        $payment->setStatus(self::STATUS_APPROVED)
-            ->setTransactionId($this->getTransactionId())
-            ->setIsTransactionClosed(0);
-
-
 
         return $this;
     }
@@ -323,14 +266,20 @@ abstract class Paynova_Paynovapayment_Model_Abstract extends Mage_Payment_Model_
     public function captureInvoice(Varien_Object $payment)
     {
 
-        $transaction_id = $payment->getLastTransID();
+
+        $transaction = Mage::getModel('sales/order_payment_transaction')->getCollection()
+            ->addAttributeToFilter('order_id', array('eq' => $payment->getOrder()->getEntityId()))->getLastItem();
+        $addData = $transaction->getAdditionalInformation(Mage_Sales_Model_Order_Payment_Transaction::RAW_DETAILS);
+        $transaction_id = $addData['transID'];
+
+
         if(empty($transaction_id)){
-            $transaction_id = Mage::getSingleton('core/session')->getTransactionID($transaction_id);
+            $transaction_id = Mage::getSingleton('core/session')->getTransactionID();
 
         }
         if (empty($transaction_id)) {
-            Mage::helper('paynovapayment')->log("Error. Missing transaction ID from order and  cannot do capture.");
-            Mage::throwException('Error. Missing transaction ID.');
+            Mage::helper('paynovapayment')->log("Error. Missing transaction ID from order and cannot do capture.");
+            Mage::throwException(Mage::helper('paynovapayment')->__('Error. Missing transaction ID.'));
         }
 
 
@@ -374,42 +323,89 @@ abstract class Paynova_Paynovapayment_Model_Abstract extends Mage_Payment_Model_
 
         foreach ($items as $itemId => $item)
         {
+
+            $orderItem = $item->getOrderItem();
+
             $product = Mage::helper('catalog/product')->getProduct($item->getSku(), Mage::app()->getStore()->getId(), 'sku');
             $productUrl = Mage::getUrl($product->getUrlPath());
             $description =  $product->getShortDescription();
             if (empty($description)){
-                $description = $item->getName();
+                $description = $orderItem->getName();
             }
-            $order_item = $item->getOrderItem();
+            $itemtype = $orderItem->getProductType();
+
+
+            $lineqty = intval($item->getQty());
+            // if product has parent - get parent qty
+
+
+            if ($item->getParentItemID() AND $item->getParentItemID()>0){
+                $parentQuoteItem = Mage::getModel("sales/quote_item")->load($item->getParentItemID());
+                $parentqty = intval($parentQuoteItem->getQty());
+                $lineqty = $lineqty * $parentqty;
+            }
+
+
+            $lineprice = $orderItem->getPrice();
+            $linetax = $orderItem->getTaxPercent();
+            $unitAmountExcludingTax =  $orderItem->getPrice();
+            $linetaxamount = ($lineqty*$lineprice)*($linetax/100);
+            $linetotalamount =  $lineqty*$unitAmountExcludingTax+$linetaxamount;
+
+
+            // If item has discount
+            if ($orderItem->getDiscountAmount() AND $orderItem->getDiscountAmount()>0 )
+            {
+                $linediscountamount = $orderItem->getDiscountAmount();
+                $itemdiscount = $linediscountamount/$lineqty;
+                $unitAmountExcludingTax = $lineprice-$itemdiscount;
+                $linetaxamount = ($lineqty*$unitAmountExcludingTax)*($linetax/100);
+                $total1 = $lineqty*$unitAmountExcludingTax;
+                $linetotalamount = $total1+$linetaxamount;
+                $linetax1 = $lineqty*$unitAmountExcludingTax;
+                $linetax2 = $linetax/100;
+                $linetaxamount = $linetax1*$linetax2;
+            }
+
             $res['lineItems'][$itemId]['id'] = $linenumber;
-            $res['lineItems'][$itemId]['articleNumber'] = $order_item->getSku();
+            $res['lineItems'][$itemId]['articleNumber'] = substr($orderItem->getSku(),0,50);
             $res['lineItems'][$itemId]['name'] = $item->getName();
-            $res['lineItems'][$itemId]['quantity'] = round($item->getQty(),0);
+            $res['lineItems'][$itemId]['quantity'] = $lineqty;
             $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
-            $res['lineItems'][$itemId]['unitAmountExcludingTax'] = round($item->getPrice(),2);
-            $res['lineItems'][$itemId]['taxPercent'] = round($order_item->getTaxPercent(),2);
-            $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($item->getTaxAmount(),2);
-            $res['lineItems'][$itemId]['totalLineAmount'] =  round($item->getRowTotalInclTax(),2);
             $res['lineItems'][$itemId]['description'] =  $description;
             $res['lineItems'][$itemId]['productUrl'] =  $productUrl;
-            $res['lineItems'][$itemId]['productUrl'] =  $item->getProductOptions();
+
+
+            if ($itemtype =="bundle") {
+                $res['lineItems'][$itemId]['unitAmountExcludingTax'] =0;
+                $res['lineItems'][$itemId]['taxPercent'] = 0;
+                $res['lineItems'][$itemId]['totalLineTaxAmount'] = 0;
+                $res['lineItems'][$itemId]['totalLineAmount'] =  0;
+            } else {
+                $res['lineItems'][$itemId]['unitAmountExcludingTax'] = round($unitAmountExcludingTax,2);
+                $res['lineItems'][$itemId]['taxPercent'] =  round($linetax,2);
+                $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($linetaxamount,2);
+                $res['lineItems'][$itemId]['totalLineAmount'] = round($linetotalamount,2);
+            }
 
             $i++;
             $linenumber++;
         }
-
-        if ($order->getShippingAmount()>0) {
+        if ($order->getShippingAmount() AND $order->getShippingAmount()>0) {
+            $quoteid = $order->getQuoteId();
+            $quote = Mage::getModel('sales/quote')->load($quoteid);
             $itemId++;
             $res['lineItems'][$itemId]['id'] = $linenumber;
-            $res['lineItems'][$itemId]['articleNumber'] = $shippingsku;
+            $res['lineItems'][$itemId]['articleNumber'] =  substr($shippingsku,0,50);
             $res['lineItems'][$itemId]['name'] = $shippingname;
             $res['lineItems'][$itemId]['quantity'] = 1;
-            $res['lineItems'][$itemId]['unitMeasure'] =  $unitMeasure;
-            $res['lineItems'][$itemId]['unitAmountExcludingTax'] = $order->getShippingAmount()-$order->getShippingTaxAmount();
-            $res['lineItems'][$itemId]['taxPercent'] = 100 * $order->getShippingTaxAmount() / $order->getShippingAmount();
+            $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
+            $res['lineItems'][$itemId]['unitAmountExcludingTax'] =  round($order->getShippingAmount(),2);
+            $res['lineItems'][$itemId]['taxPercent'] = Mage::helper('paynovapayment')->getShippingTaxPercentFromQuote($quote);
             $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($order->getShippingTaxAmount(),2);
-            $res['lineItems'][$itemId]['totalLineAmount'] =  round($order->getShippingAmount(),2);
-            $res['lineItems'][$itemId]['productUrl'] = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);
+            $res['lineItems'][$itemId]['totalLineAmount'] =  round($order->getShippingInclTax(),2);
+            $res['lineItems'][$itemId]['description'] =  $description;
+            $res['lineItems'][$itemId]['productUrl'] =   Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);;
         }
 
 
@@ -439,7 +435,15 @@ abstract class Paynova_Paynovapayment_Model_Abstract extends Mage_Payment_Model_
             return $status->isSuccess;
 
         }else{
+
             $error=$status->statusMessage;
+
+
+            $order->setState(Mage_Sales_Model_Order::STATE_PENDING_PAYMENT, Mage_Sales_Model_Order::STATE_PENDING_PAYMENT,
+                Mage::helper('paynovapayment')->__($error)
+            );
+            $order->save();
+
             Mage::throwException("$error");
 
             $this->_redirect('checkout/onepage');

@@ -77,6 +77,10 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
         // bill to
 
         if($paymentcode == 'paynovapayment_invoice' || $paymentcode == 'paynovapayment_installment'){
+            if(!empty($addinfo)){
+                $this->setAddinfoAddresstoOrder($addinfo, $order);
+            }
+
             $address = $addinfo['CustomerAddress'];
 
             $res['billTo']['name']['firstName'] =  $addinfo['CustomerName']['firstName'];
@@ -105,6 +109,10 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
             $shippingId = $order->getShippingAddress()->getId();
             $address = "";
             if($paymentcode == 'paynovapayment_invoice' || $paymentcode == 'paynovapayment_installment'){
+                if(!empty($addinfo)){
+                    $this->setAddinfoAddresstoOrder($addinfo, $order, 'shipping');
+                }
+
                 $address = $addinfo['CustomerAddress'];
                 $res['shipTo']['name']['firstName'] = $addinfo['CustomerName']['firstName'];
                 $res['shipTo']['name']['lastName'] = $addinfo['CustomerName']['firstName'];
@@ -174,23 +182,69 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
             if (empty($description)){
                 $description = $item->getName();
             }
+            $itemtype = $item->getProductType();
+
+
+            $lineqty = intval($item->getQty());
+            // if product has parent - get parent qty
+
+
+            if ($item->getParentItemID() AND $item->getParentItemID()>0){
+                $parentQuoteItem = Mage::getModel("sales/quote_item")->load($item->getParentItemID());
+                $parentqty = intval($parentQuoteItem->getQty());
+                $lineqty = $lineqty * $parentqty;
+            }
+
+
+            $lineprice = $item->getPrice();
+            $linetax = $item->getTaxPercent();
+            $unitAmountExcludingTax =  $item->getPrice();
+            $linetaxamount = ($lineqty*$lineprice)*($linetax/100);
+            $linetotalamount =  $lineqty*$unitAmountExcludingTax+$linetaxamount;
+
+            // If item has discount
+            if ($item->getDiscountAmount() AND $item->getDiscountAmount()>0 )
+            {
+                $linediscountamount = $item->getDiscountAmount();
+                $itemdiscount = $linediscountamount/$lineqty;
+                $unitAmountExcludingTax = $lineprice-$itemdiscount;
+                $linetaxamount = ($lineqty*$unitAmountExcludingTax)*($linetax/100);
+                $total1 = $lineqty*$unitAmountExcludingTax;
+                $linetotalamount = $total1+$linetaxamount;
+                $linetax1 = $lineqty*$unitAmountExcludingTax;
+                $linetax2 = $linetax/100;
+                $linetaxamount = $linetax1*$linetax2;
+            }
+
+
+
 
             $res['lineItems'][$itemId]['id'] = $linenumber;
             $res['lineItems'][$itemId]['articleNumber'] = substr($item->getSku(),0,50);
             $res['lineItems'][$itemId]['name'] = $item->getName();
-            $res['lineItems'][$itemId]['quantity'] = $item->getQty();
+            $res['lineItems'][$itemId]['quantity'] = $lineqty;
             $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
-            $res['lineItems'][$itemId]['unitAmountExcludingTax'] = round($item->getPrice(),2);
-            $res['lineItems'][$itemId]['taxPercent'] = round($item->getTaxPercent(),2);
-            $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($item->getTaxAmount(),2);
-            $res['lineItems'][$itemId]['totalLineAmount'] =  round($item->getRowTotalInclTax(),2);
             $res['lineItems'][$itemId]['description'] =  $description;
             $res['lineItems'][$itemId]['productUrl'] =  $productUrl;
+
+
+            if ($itemtype =="bundle") {
+                $res['lineItems'][$itemId]['unitAmountExcludingTax'] =0;
+                $res['lineItems'][$itemId]['taxPercent'] = 0;
+                $res['lineItems'][$itemId]['totalLineTaxAmount'] = 0;
+                $res['lineItems'][$itemId]['totalLineAmount'] =  0;
+            } else {
+                $res['lineItems'][$itemId]['unitAmountExcludingTax'] = round($unitAmountExcludingTax,2);
+                $res['lineItems'][$itemId]['taxPercent'] =  round($linetax,2);
+                $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($linetaxamount,2);
+                $res['lineItems'][$itemId]['totalLineAmount'] = round($linetotalamount,2);
+            }
+
             $i++;
             $linenumber++;
         }
 
-        if ($order->getShippingAmount() AND $order->getShippingAmount()>0) {
+            if ($order->getShippingAmount() AND $order->getShippingAmount()>0) {
                 $itemId++;
                 $linenumber++;
                 $res['lineItems'][$itemId]['id'] = $linenumber;
@@ -199,7 +253,7 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
                 $res['lineItems'][$itemId]['quantity'] = 1;
                 $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
                 $res['lineItems'][$itemId]['unitAmountExcludingTax'] =  round($order->getShippingAmount(),2);
-                $res['lineItems'][$itemId]['taxPercent'] = $this->getShippingTaxPercentFromQuote($quote);
+                $res['lineItems'][$itemId]['taxPercent'] = Mage::helper('paynovapayment')->getShippingTaxPercentFromQuote($quote);
                 $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($order->getShippingTaxAmount(),2);
                 $res['lineItems'][$itemId]['totalLineAmount'] =  round($order->getShippingInclTax(),2);
                 $res['lineItems'][$itemId]['description'] =  $description;
@@ -208,10 +262,48 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
 
         $res['orderDescription'] =  Mage::helper('paynovapayment')->__('Order for store: ').Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);
 
-
         return $res;
 
     }
+    public function setAddinfoAddresstoOrder($addinfo, $order, $type = 'order'){
+
+        if($type == 'shipping') {
+            $orderAddress = $order->getShippingAddress();
+        }else{
+            $orderAddress = $order->getBillingAddress();
+        }
+
+        $address = $addinfo['CustomerAddress'];
+
+        if($orderAddress->getFirstname() != $addinfo['CustomerName']['firstName']){
+            $orderAddress->setFirstname($addinfo['CustomerName']['firstName']);
+        };
+
+        if($orderAddress->getLastname() != $addinfo['CustomerName']['lastName']){
+            $orderAddress->setLastname($addinfo['CustomerName']['lastName']);
+        };
+
+        if($orderAddress->getStreet() != $address['Street']){
+            $orderAddress->setStreet($address['Street']);
+        };
+
+        if($orderAddress->getPostcode() != $address['postalCode']){
+            $orderAddress->setPostcode($address['postalCode']);
+        };
+
+        if($orderAddress->getCity() != $address['City']){
+            $orderAddress->setCity($address['City']);
+        };
+
+        if($orderAddress->getCity() != $address['City']){
+            $orderAddress->setCity($address['City']);
+        };
+
+
+        $orderAddress->save();
+        return ;
+    }
+
     public function createInitializePaymentCall($order, $orderId, $selectedPaymentId, $selectedModelCode)
     {
         //store config
@@ -277,7 +369,8 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
 
         // items
         $order->getAllItems();
-        $items = $order->getAllVisibleItems();
+        $items = $order->getAllItems();
+
 
         $itemcount= count($items);
         $data = array();
@@ -296,6 +389,7 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
             $shippingsku = "Shipping";
         }
 
+        $linenumber=1;
         foreach ($items as $itemId => $item)
         {
             $product = Mage::helper('catalog/product')->getProduct($item->getSku(), Mage::app()->getStore()->getId(), 'sku');
@@ -304,19 +398,60 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
             if (empty($description)){
                 $description = $item->getName();
             }
-            $res['lineItems'][$itemId]['id'] = $i;
+            $itemtype = $item->getProductType();
+
+
+            $lineqty = intval($item->getQtyOrdered());
+
+
+
+
+
+            $lineprice = $item->getPrice();
+            $linetax = $item->getTaxPercent();
+            $unitAmountExcludingTax =  $item->getPrice();
+            $linetaxamount = ($lineqty*$lineprice)*($linetax/100);
+            $linetotalamount =  $lineqty*$unitAmountExcludingTax+$linetaxamount;
+
+            // If item has discount
+            if ($item->getDiscountAmount() AND $item->getDiscountAmount()>0 )
+            {
+                $linediscountamount = $item->getDiscountAmount();
+                $itemdiscount = $linediscountamount/$lineqty;
+                $unitAmountExcludingTax = $lineprice-$itemdiscount;
+                $linetaxamount = ($lineqty*$unitAmountExcludingTax)*($linetax/100);
+                $total1 = $lineqty*$unitAmountExcludingTax;
+                $linetotalamount = $total1+$linetaxamount;
+                $linetax1 = $lineqty*$unitAmountExcludingTax;
+                $linetax2 = $linetax/100;
+                $linetaxamount = $linetax1*$linetax2;
+            }
+
+
+
+            $res['lineItems'][$itemId]['id'] = $linenumber;
             $res['lineItems'][$itemId]['articleNumber'] = substr($item->getSku(),0,50);
             $res['lineItems'][$itemId]['name'] = $item->getName();
-            $res['lineItems'][$itemId]['quantity'] = $item->getQtyToInvoice();
+            $res['lineItems'][$itemId]['quantity'] = $lineqty;
             $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
-            $res['lineItems'][$itemId]['unitAmountExcludingTax'] = round($item->getPrice(),2);
-            $res['lineItems'][$itemId]['taxPercent'] = round($item->getTaxPercent(),2);
-            $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($item->getTaxAmount(),2);
-            $res['lineItems'][$itemId]['totalLineAmount'] =  round($item->getRowTotalInclTax(),2);
             $res['lineItems'][$itemId]['description'] =  $description;
             $res['lineItems'][$itemId]['productUrl'] =  $productUrl;
 
+
+            if ($itemtype =="bundle") {
+                $res['lineItems'][$itemId]['unitAmountExcludingTax'] =0;
+                $res['lineItems'][$itemId]['taxPercent'] = 0;
+                $res['lineItems'][$itemId]['totalLineTaxAmount'] = 0;
+                $res['lineItems'][$itemId]['totalLineAmount'] =  0;
+            } else {
+                $res['lineItems'][$itemId]['unitAmountExcludingTax'] = round($unitAmountExcludingTax,2);
+                $res['lineItems'][$itemId]['taxPercent'] =  round($linetax,2);
+                $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($linetaxamount,2);
+                $res['lineItems'][$itemId]['totalLineAmount'] = round($linetotalamount,2);
+            }
+
             $i++;
+            $linenumber++;
         }
         if ($order->getShippingAmount() AND $order->getShippingAmount()>0) {
             //load quote
@@ -331,16 +466,17 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
             $res['lineItems'][$itemId]['quantity'] = 1;
             $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
             $res['lineItems'][$itemId]['unitAmountExcludingTax'] =  round($order->getShippingAmount(),2);
-            $res['lineItems'][$itemId]['taxPercent'] = $this->getShippingTaxPercentFromQuote($quote);
+            $res['lineItems'][$itemId]['taxPercent'] = Mage::helper('paynovapayment')->getShippingTaxPercentFromQuote($quote);
             $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($order->getShippingTaxAmount(),2);
             $res['lineItems'][$itemId]['totalLineAmount'] =  round($order->getShippingInclTax(),2);
             $res['lineItems'][$itemId]['description'] =  $description;
             $res['lineItems'][$itemId]['productUrl'] =  $productUrl;
         }
 
+
         return $res;
     }
-    public function createAuthorizePaymentCall($order, $orderId, $selectedPaymentId, $selectedModelCode, $paynova_product, $governmentid)
+    public function createAuthorizePaymentCall($order, $orderId, $selectedPaymentId, $selectedModelCode, $paynova_product = null, $governmentid = null)
     {
         //store config
         $salesLocationId = Mage::getStoreConfig('paynovapayment/advanced_settings/sales_location_id');
@@ -349,11 +485,11 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
         $paymentChannelId = Mage::getStoreConfig('paynovapayment/advanced_settings/payment_channel_id');
 
         if(empty($governmentid)){
-            Mage::throwException('No governmentid.');
+            Mage::throwException(Mage::helper('paynovapayment')->__('No governmentid.'));
         }
 
         if(empty($paynova_product)){
-            Mage::throwException('No payment product.');
+            Mage::throwException(Mage::helper('paynovapayment')->__('No payment product.'));
         }
 
         if (!$paymentChannelId)
@@ -363,130 +499,17 @@ class Paynova_Paynovapayment_Model_Order extends Mage_Payment_Model_Method_Abstr
         $iso2 = $order->getBillingAddress()->getCountry();
         $iso3 = Mage::getModel('directory/country')->load($iso2)->getIso3Code();;
 
-
-        //$res['orderId'] = $orderId;
         $res['totalAmount'] = round($order->getGrandTotal(),2);
         $res['paymentChannelId'] = $paymentChannelId;
 
         $res['paymentMethodId'] = $selectedPaymentId;
         $res['PaymentMethodProductId'] = $paynova_product;
-        //$res['sessionTimeout'] = $sessionTimeout;
+
         $res['AuthorizationType'] = 'InvoicePayment';
 
-        //$sessionTimeout = Mage::getStoreConfig('paynovapayment/advanced_settings/session_timeout');
-        //$themeName = Mage::getStoreConfig('paynovapayment/advanced_settings/theme');
-        //$layoutName = Mage::getStoreConfig('paynovapayment/advanced_settings/layout');
-        /*if (!$sessionTimeout)
-        {
-            $sessionTimeout = 600;
-        }
-        else if($sessionTimeout<180)
-        {
-            $sessionTimeout = 180;
-        }
 
-        $displayLineItems = Mage::getStoreConfig('paynovapayment/advanced_settings/display_line_items');*/
-
-        /*
-                $interfaceId = 5;
-        */
-        /*      $redirectPendingUrl=Mage::getUrl('paynovapayment/processing/pending');
-              $redirectOKUrl=Mage::getUrl('paynovapayment/processing/success');
-              $redirectCancelUrl=Mage::getUrl('paynovapayment/processing/cancel');
-              $redirectCallbackUrl=Mage::getUrl('paynovapayment/processing/callback');
-
-              //get iso3 language code*/
-
-        //interface options
-
-        /*$res['interFaceOptions']['interfaceId'] = $interfaceId;
-        $res['interFaceOptions']['displayLineItems'] = $displayLineItems;
-
-        if(!empty($themeName)){$res['interFaceOptions']['themeName'] = $themeName;}
-
-        if(!empty($layoutName)){$res['interFaceOptions']['layoutName'] = $layoutName;}
-        $res['interFaceOptions']['customerLanguageCode'] = $iso3; //
-        $res['interFaceOptions']['urlRedirectSuccess'] = $redirectOKUrl;
-        $res['interFaceOptions']['urlRedirectCancel'] = $redirectCancelUrl;
-        $res['interFaceOptions']['urlRedirectPending'] = $redirectPendingUrl;
-        $res['interFaceOptions']['urlCallback'] = $redirectCallbackUrl;
-        //profilepaymentoptions (optional)
-
-        if(!empty($variable)){$res['profilePaymentOptions']['profileId'] = $variable;}
-        if(!empty($variable)){$res['profilePaymentOptions']['profileCard']['cardId'] = $variable;}
-        if(!empty($variable)){$res['profilePaymentOptions']['profileCard']['cvc'] = $variable;}
-        if(!empty($variable)){$res['profilePaymentOptions']['displaySaveProfileCardOption'] = $variable;}
-
-
-        // items
-        $order->getAllItems();
-        $items = $order->getAllVisibleItems();
-
-        $itemcount= count($items);
-        $data = array();
-        $i=1;
-
-        $unitMeasure = Mage::getStoreConfig('paynovapayment/advanced_settings/product_unit');
-        if (empty($unitMeasure)){
-            $unitMeasure = "pcs";
-        }
-        $shippingname = Mage::getStoreConfig('paynovapayment/advanced_settings/shipping_name');
-        if (empty($shippingname)){
-            $shippingname = "Shipping";
-        }
-        $shippingsku = Mage::getStoreConfig('paynovapayment/advanced_settings/shipping_sku');
-        if (empty($shippingsku)){
-            $shippingsku = "Shipping";
-        }
-
-        foreach ($items as $itemId => $item)
-        {
-            $product = Mage::helper('catalog/product')->getProduct($item->getSku(), Mage::app()->getStore()->getId(), 'sku');
-            $productUrl = Mage::getUrl($product->getUrlPath());
-            $description =  $product->getShortDescription();
-            if (empty($description)){
-                $description = $item->getName();
-            }
-            $res['lineItems'][$itemId]['id'] = $i;
-            $res['lineItems'][$itemId]['articleNumber'] = $item->getId();
-            $res['lineItems'][$itemId]['name'] = $item->getName();
-            $res['lineItems'][$itemId]['quantity'] = $item->getQtyToInvoice();
-            $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
-            $res['lineItems'][$itemId]['unitAmountExcludingTax'] = round($item->getPrice(),2);
-            $res['lineItems'][$itemId]['taxPercent'] = round($item->getTaxPercent(),2);
-            $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($item->getTaxAmount(),2);
-            $res['lineItems'][$itemId]['totalLineAmount'] =  round($item->getRowTotalInclTax(),2);
-            $res['lineItems'][$itemId]['description'] =  $description;
-            $res['lineItems'][$itemId]['productUrl'] =  $productUrl;
-
-            $i++;
-        }
-        if ($order->getShippingAmount()>0) {
-            $itemId++;
-            $res['lineItems'][$itemId]['id'] = $i;
-            $res['lineItems'][$itemId]['articleNumber'] = $shippingsku;
-            $res['lineItems'][$itemId]['name'] = $shippingname;
-            $res['lineItems'][$itemId]['quantity'] = 1;
-            $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
-            $res['lineItems'][$itemId]['unitAmountExcludingTax'] = $order->getShippingAmount()-$order->getShippingTaxAmount();
-            $res['lineItems'][$itemId]['taxPercent'] = 100 * $order->getShippingTaxAmount() / $order->getShippingAmount();
-            $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($order->getShippingTaxAmount(),2);
-            $res['lineItems'][$itemId]['totalLineAmount'] =  round($order->getShippingAmount(),2);
-        }
-*/
         return $res;
     }
 
-    public function getShippingTaxPercentFromQuote($quote){
-        
-            
-            $store = $quote->getStore();
-            $taxCalculation = Mage::getModel('tax/calculation');
-            $request = $taxCalculation->getRateRequest(null, null, null, $store);
-            $taxRateId = Mage::getStoreConfig('tax/classes/shipping_tax_class', $store);
-            
-            //taxRateId is the same model id as product tax classes, so you can do this:
-            return $taxCalculation->getRate($request->setProductClassId($taxRateId));
-    }
 
 }

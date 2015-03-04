@@ -29,7 +29,7 @@
                 <show_in_default>1</show_in_default>
                 <show_in_website>1</show_in_website>
                 <show_in_store>1</show_in_store>
-                <comment><![CDATA[This is a <strong>Paynova</strong> example comment.<br />You can read more about our <u>API</u> on: <a href="http://docs.paynova.com/display/API/" target="_blank">docs.paynova.com/display/API/</a>]]></comment>
+                <comment><![CDATA[You can read more about Paynova <u>API</u> on: <a href="http://docs.paynova.com/display/API/" target="_blank">docs.paynova.com/display/API/</a>]]></comment>
                 <fields>
                     <active translate="label">
                         <label>Enabled</label>

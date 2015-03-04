@@ -27,5 +27,13 @@
 <ul class="form-list" id="payment_form_<?php echo $_code ?>" style="display:none">
     <li>
         <?php echo Mage::helper('paynovapayment')->__('You will be redirected to our secure payment page when you place an order.'); ?>
+        <?php
+        $currentUrl = Mage::helper('core/url')->getCurrentUrl();
+        if (!$currentUrl) {
+            $currentUrl = "";
+        }
+        ?>
+        <input type="hidden" value="<?php echo $currentUrl; ?>" name="payment[paynova_paynovapayment_checkoutpath]"/>
     </li>
+
 </ul>

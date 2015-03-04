@@ -34,7 +34,8 @@ class Paynova_Paynovapayment_Model_Observer
             $res['transactionId'] = $order->getPayment()->getLastTransId();
 
             if (empty($res['transactionId'])) {
-                Mage::helper('paynovapayment')->log("Error. Missing transaction ID from order ".$orderId." cannot do refund.");
+                $errmsg =  Mage::Helper('paynovapayment')->__('Error. Missing transaction ID from order %s cannot do refund.', $orderId);
+                Mage::helper('paynovapayment')->log($errmsg);
                 Mage::throwException('Error. Missing transaction ID.');
             }
 
@@ -92,22 +93,28 @@ class Paynova_Paynovapayment_Model_Observer
             }
 
             if ($order->getShippingRefunded()<>0) {
+                $quoteid = $order->getQuoteId();
+                $quote = Mage::getModel('sales/quote')->load($quoteid);
+
                 $itemId++;
                 $linenumber++;
+
                 $res['lineItems'][$itemId]['id'] = $linenumber;
-                $res['lineItems'][$itemId]['articleNumber'] =  $shippingsku;
+                $res['lineItems'][$itemId]['articleNumber'] =  substr($shippingsku,0,50);
                 $res['lineItems'][$itemId]['name'] = $shippingname;
                 $res['lineItems'][$itemId]['quantity'] = 1;
                 $res['lineItems'][$itemId]['unitMeasure'] = $unitMeasure;
-                $res['lineItems'][$itemId]['unitAmountExcludingTax'] = round($order->getShippingRefunded(),2);
-                $res['lineItems'][$itemId]['taxPercent'] = 100 * $order->getShippingTaxAmount() / $order->getShippingAmount();
+                $res['lineItems'][$itemId]['unitAmountExcludingTax'] =  round($order->getShippingRefunded(),2);
+                $res['lineItems'][$itemId]['taxPercent'] = Mage::helper('paynovapayment')->getShippingTaxPercentFromQuote($quote);
                 $res['lineItems'][$itemId]['totalLineTaxAmount'] = round($order->getShippingTaxAmount(),2);
-                $res['lineItems'][$itemId]['totalLineAmount'] =  $order->getShippingRefunded()+$order->getShippingTaxAmount();
-                $res['lineItems'][$itemId]['productUrl'] = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);
+                $res['lineItems'][$itemId]['totalLineAmount'] =  round($order->getShippingRefunded()+$order->getShippingTaxAmount(),2);
+                $res['lineItems'][$itemId]['description'] =  $description;
+                $res['lineItems'][$itemId]['productUrl'] =   Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);;
+
+
             }
 
 
-            /* TODO: Test adjustment refund. Does it require tax? */
             if ($order->getAdjustmentNegative() or $order->getAdjustmentPositive()) {
                 $itemId++;
                 $linenumber++;
@@ -125,12 +132,17 @@ class Paynova_Paynovapayment_Model_Observer
 
             $output = $abstractModel->setCurlCall($res, '/transactions/'.$res['transactionId'].'/refund/'.$res['totalAmount']);
 
-            if(!$output){
-                Mage::getSingleton('core/session')->addError('Something went wrong. Refund request not sent to Paynova.');
-                $order->addStatusToHistory($order->getStatus(), 'Something went wrong. Refund request not sent to Paynova.', false);
-                $order->save();
-            }
+            if (!empty($output)) {
+                $status = $output->status;
 
+                if(!$status->isSuccess){ // check if response return any error.
+                    $error= Mage::Helper('paynovapayment')->__($status->statusMessage);
+                    $order->addStatusToHistory($order->getStatus(), $error, false);
+                    $order->save();
+                    Mage::throwException("$error");
+                }
+
+            }
 
             Mage::app()->getResponse()->setRedirect(Mage::getUrl('*/sales_order/view', array('order_id' =>$orderId)));
 
@@ -154,13 +166,23 @@ class Paynova_Paynovapayment_Model_Observer
             $order = Mage::getModel('sales/order')->load($entid);
             $totalamount =  round($order->getGrandTotal(),2);
 
-            $transid =  $order->getPayment()->getLastTransId();
+            // get trans id from additional information
+            if ($order->getPayment()->getAdditionalInformation('transactionid')) {
+                $transid =  $order->getPayment()->getAdditionalInformation('transactionid');
+            } else {
+                // fallback
+                $transid =  $order->getPayment()->getLastTransId();
+            }
+
+
+
 
             if (empty($transid)) {
-                Mage::getSingleton('core/session')->addError('Missing transaction ID. Can´t send anull order request to Paynova');
-                $order->addStatusToHistory($order->getStatus(), 'Missing transaction ID. Can´t send anull order request to Paynova.', false);
+                $errmsg =  Mage::Helper('paynovapayment')->__('Missing transaction ID. Can´t send anull order request to Paynova');
+                Mage::getSingleton('core/session')->addError($errmsg);
+                $order->addStatusToHistory($order->getStatus(), '$errmsg', false);
                 $order->save();
-                $logmsg = "Missing transaction ID from order #".$order->getIncrementId().". Can´t send anull order request to Paynova.";
+                $logmsg =  Mage::Helper('paynovapayment')->__('Missing transaction ID from order #%s. Can´t send anull order request to Paynova',$order->getIncrementId());
                 Mage::Helper('paynovapayment')->log($logmsg);
             } else {
 
@@ -178,8 +200,9 @@ class Paynova_Paynovapayment_Model_Observer
                 Mage::Helper('paynovapayment')->log($output);
 
 	           	if(!$output){
-                    Mage::getSingleton('core/session')->addError('Something went wrong. Anull request not sent to Paynova.');
-                    $order->addStatusToHistory($order->getStatus(), 'Something went wrong. Anull request not sent to Paynova.', false);
+                    $errmsg =  Mage::Helper('paynovapayment')->__('Missing transaction ID. Can´t send anull order request to Paynova');
+                    Mage::getSingleton('core/session')->addError($errmsg);
+                    $order->addStatusToHistory($order->getStatus(),$errmsg, false);
                     $order->save();
 	           	}
             }
@@ -267,9 +290,6 @@ class Paynova_Paynovapayment_Model_Observer
         $paymentMethod = $observer->getEvent()
             ->getPayment()
             ->getMethodInstance();
-
-        Mage::helper('paynovapayment')->log("Setting current invoice to capture");
-
 
         $payment = $observer->getEvent()
             ->getPayment();

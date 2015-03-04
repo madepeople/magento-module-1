@@ -142,7 +142,7 @@ function paynova_paynovapayment_getPaymentMethods(){
 
                 if (jsonData.isSuccess==1) {
 
-                    options_output += '<select name="payment[paynova_paynovapayment_installment_paymentmethod]" id="payment[paynova_paynovapayment_installment_paymentmethod]" onchange="switchInstallment(this.options[this.selectedIndex])">';
+                    options_output += '<select name="payment[paynova_paynovapayment_installment_paymentmethod]" id="payment[paynova_paynovapayment_installment_paymentmethod]" onchange="switchInstallment(this.options[this.selectedIndex])" class="required-entry">';
 
                     for (i = 0; i < jsonData.options.length; i++) {
 

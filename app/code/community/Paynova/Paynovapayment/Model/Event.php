@@ -161,13 +161,19 @@ class Paynova_Paynovapayment_Model_Event
         Mage::getSingleton('core/session')->setTransactionID($transactionID);
         $payment = $order->getPayment();
         $payment->setTransactionId($transactionID);
+
         $transaction = $payment->addTransaction($typename, null, false, $comment);
         $transaction->setParentTxnId($transactionID);
         $transaction->setIsClosed($closed);
         $transaction->setAdditionalInformation(
             Mage_Sales_Model_Order_Payment_Transaction::RAW_DETAILS, $arrInformation);
         $transaction->save();
+        //$order->save();
+
+        $payment->setAdditionalInformation('transid',$transactionID);
+        $payment->save();
         $order->save();
+
 
 
         return $this;

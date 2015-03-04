@@ -45,19 +45,15 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
     public function paymentAction()
     {
 
+        $session = $this->_getCheckout();
+        $session->setPaynovaRealOrderId($session->getLastRealOrderId());
+        $quoteId = $session->getLastQuoteId();
 
         try {
 
-            $session = $this->_getCheckout();
-            $session->setPaynovaRealOrderId($session->getLastRealOrderId());
-            $quoteId = $session->getLastQuoteId();
-            $quote = Mage::getModel('sales/quote')->load($quoteId);
-            $addinfo = $quote->getPayment()->getAdditionalInformation();
 
-            if(!empty($addinfo['productid'])) {
-                $paynova_product = $addinfo['productid'];
-                $governmentid = $addinfo['governmentid'];
-            }
+            $quote = Mage::getModel('sales/quote')->load($quoteId);
+
 			$order = Mage::getModel('sales/order');
 
             $paynova_order = Mage::getModel('paynovapayment/order');
@@ -72,8 +68,6 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
 
             $res = $paynova_order->loadByIncrementId($lastIncrementId);
 
-
-
 			$selectedPaymentId=$corePaymentObj->getSelectedPaymentId();  // get payment id from selected payment.
 			$selectedModelCode=$corePaymentObj->getCode(); 				// get payment code for selected method.
 			$filterSelectedModelCode=str_replace('_','/',$selectedModelCode);
@@ -81,7 +75,7 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
             $order->loadByIncrementId($session->getLastRealOrderId());
 
             if (!$order->getId()) {
-                Mage::throwException('No order for processing found');
+                Mage::throwException(Mage::helper('paynovapayment')->__('No order for processing found'));
             }
 
             $abstractModel=Mage::getModel($filterSelectedModelCode); // create a object for acc class.
@@ -93,9 +87,9 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
             Mage::helper('paynovapayment')->log($res);
 
            	if(!$res){
-            	Mage::throwException('Unable to send the request on Paynova server.');
+            	Mage::throwException(Mage::helper('paynovapayment')->__('Unable to send the request on Paynova server.'));
            	}else if(!isset($res->orderId)){
-                Mage::throwException('Unable to send the request on Paynova server.'.$res->status->statusMessage);
+                Mage::throwException(Mage::helper('paynovapayment')->__('Unable to send the request on Paynova server.').$res->status->statusMessage);
             }
 
             $paynova_order_nr = $res->orderId;
@@ -105,9 +99,16 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
             );
 
 
-
             if($filterSelectedModelCode == 'paynovapayment/invoice' || $filterSelectedModelCode == 'paynovapayment/installment') {
 
+                //get value from additional info
+
+                $addinfo = $quote->getPayment()->getAdditionalInformation();
+
+                if(!empty($addinfo['productid'])) {
+                    $paynova_product = $addinfo['productid'];
+                    $governmentid = $addinfo['governmentid'];
+                }
 
                 $res = $paynova_order->createAuthorizePaymentCall($order, $paynova_order_nr, $selectedPaymentId, $selectedModelCode, $paynova_product, $governmentid );
 
@@ -117,7 +118,8 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
 
                 if(!$res){
 
-                    //Mage::throwException($output->status->statusMessage);
+                    //Try to load old quote
+
                     $this->_getCheckout()->addError($output->status->statusMessage);
                     $order->save();
                     $this->_redirect('checkout/cart');
@@ -157,16 +159,13 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
 
 
                 }else{
-                    Mage::throwException('order and/or transactionId is empty.');
+                    Mage::throwException(Mage::helper('paynovapayment')->__('order and/or transactionId is empty.'));
                 }
-
-                //trying to capture
 
                 $capture=Mage::getStoreConfig('paynovapayment/advanced_settings/auto_finalize');
 
                 if($capture){
                     $err = $abstractModel->invoicing($order);
-
 
                     $order->save();
 
@@ -215,13 +214,31 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
 
         } catch (Mage_Core_Exception $e) {
 
-            $order->addStatusToHistory($order->getStatus(), $e->getMessage());   // try to save the exception with the current order.
-            $this->_getCheckout()->addError('We are sorry, but an error occurred while attempting to process your payment.');
+            $order->addStatusToHistory($order->getStatus(), Mage::helper('paynovapayment')->__($e->getMessage()));   // try to save the exception with the current order.
+            $this->_getCheckout()->addError(Mage::helper('paynovapayment')->__('We are sorry, but an error occurred while attempting to process your payment.'));
+            $order->setState(Mage_Sales_Model_Order::STATE_CANCELED, Mage_Sales_Model_Order::STATE_CANCELED,
+                Mage::helper('paynovapayment')->__($e->getMessage())
+            );
+            //set quote as active
+
+
+            $quote = Mage::getModel('sales/quote')->load($quoteId);
+
+            $quote->setIsActive(true)->save();
+            $session->setQuoteId($quoteId);
+
             $order->save();
-            parent::_redirect('checkout/cart');
+         parent::_redirect('checkout/cart');
+
         }catch (Exception $e){
         	$this->_getCheckout()->addError($e->getMessage());
             Mage::logException($e);
+
+            $quote = Mage::getModel('sales/quote')->load($quoteId);
+
+            $quote->setIsActive(true)->save();
+            $session->setQuoteId($quoteId);
+
             parent::_redirect('checkout/cart');
         }
     }
@@ -250,14 +267,14 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
 
 
         if (!$order->getId()) {
-            Mage::throwException('No order for processing found');
+            Mage::throwException(Mage::helper('paynovapayment')->__('No order for processing found'));
         }
 
         if($order->getState() == 'pending_payment') {
             $order->addStatusHistoryComment(Mage::helper('paynovapayment')->__('Successfully returned from Paynova'));
 
         }else{
-                Mage::helper('paynovapayment')->__('POST was not first exiting');
+                Mage::helper('paynovapayment')->__(Mage::helper('paynovapayment')->__('POST was not first exiting'));
 	            //todo check state of order before sending to success
 
                 $order->save();
@@ -417,51 +434,28 @@ class Paynova_Paynovapayment_ProcessingController extends Mage_Core_Controller_F
         $order->loadByIncrementId($order_id);
 
 
-        if($body['EVENT_TYPE'] == 'SESSION_END'){
-        Mage::helper('paynovapayment')->log('CALLBACK: SESSION END');
 
-        exit;
-        }
-
-        if($body['EVENT_TYPE'] == 'PAYMENT'){
-            Mage::helper('paynovapayment')->log('CALLBACK: PAYMENT');
-            $order->save();
-
-        }
-
-        if($order->getState() == 'pending_payment') {
-            Mage::helper('paynovapayment')->log('CALLBACK: FIRST');
-            $order->save();
-
-        }else{
-            Mage::helper('paynovapayment')->log('CALLBACK: NOT FIRST');
-            $order->save();
-            return;
-            exit;
+        if($order->getState() != 'pending_payment') {
+            Mage::helper('paynovapayment')->log( Mage::helper('paynovapayment')->__('CALLBACK: NOT FIRST'));
         }
 
 
-        $order->save();
-        exit;
-        $event = Mage::getModel('paynovapayment/event')
+
+         $event = Mage::getModel('paynovapayment/event')
             ->setEventData($body);
 
         $order->save();
 
-        Mage::helper('paynovapayment')->log('trying to process');
+
         try {
 
             $quoteId = $event->successEvent();
 
-            Mage::helper('paynovapayment')->log('starting to process');
-            $order->save();
-
             $this->_getCheckout()->setLastSuccessQuoteId($quoteId);
 
-            $order->save();
 
             if($auto_capture){
-                Mage::helper('paynovapayment')->log('trying to capture');
+
                 $payment = $order->getPayment();
                 $amount = $body['PAYMENT_1_AMOUNT'];
 

@@ -2,7 +2,7 @@
 <config>
     <modules>
         <Paynova_Paynovapayment>
-            <version>0.0.0.2</version>
+            <version>0.0.0.3</version>
         </Paynova_Paynovapayment>
     </modules>
     <global>
@@ -113,6 +113,17 @@
                 </paynovapayment>
             </updates>
         </layout>
+        <events>
+            <sales_order_payment_capture>
+                <observers>
+                    <set_current_invoice_to_capture>
+                        <type>singleton</type>
+                        <class>Paynova_Paynovapayment_Model_Observer</class>
+                        <method>setCurrentInvoiceToCapture</method>
+                    </set_current_invoice_to_capture>
+                </observers>
+            </sales_order_payment_capture>
+        </events>
     </frontend>
     <admin>
          <routers>
@@ -136,6 +147,15 @@
                 </paynova_paynovapayment>
             </observers>
         </sales_order_payment_cancel>
+            <sales_order_payment_capture>
+                <observers>
+                    <set_current_invoice_to_capture>
+                        <type>singleton</type>
+                        <class>Paynova_Paynovapayment_Model_Observer</class>
+                        <method>setCurrentInvoiceToCapture</method>
+                    </set_current_invoice_to_capture>
+                </observers>
+            </sales_order_payment_capture>
         </events>
         <translate>
             <modules>

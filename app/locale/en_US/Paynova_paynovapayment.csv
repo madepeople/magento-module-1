@@ -56,3 +56,15 @@
 "InstallmentsThreeMonths_label","3 months"
 "InstallmentsTwelveMonths_label","12 months"
 "InstallmentsTwentyfourMonths_label","24 months"
+
+"We are sorry, but an error occurred while attempting to process your payment.", "We are sorry, but an error occurred while attempting to process your payment."
+"No governmentid.", "No governmentid."
+"No order for processing found","No order for processing found"
+"Unable to send the request on Paynova server.","Unable to send the request on Paynova server."
+"Invoice/Installment created at Paynova.", "Invoice/Installment created at Paynova."
+"order and/or transactionId is empty.", "order and/or transactionId is empty."
+"Redirected to Paynova.", "Redirected to Paynova."
+"No order for processing found", "No order for processing found"
+"POST was not first exiting", "POST was not first exiting"
+"Error. Missing transaction ID.", "Error. Missing transaction ID."
+

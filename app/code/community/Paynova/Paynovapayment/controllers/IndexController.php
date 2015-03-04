@@ -64,8 +64,7 @@ class Paynova_Paynovapayment_IndexController extends Mage_Core_Controller_Front_
     {
         //grab values posted
         $postarray = $this->getRequest()->getParams();
-        //$postarray['governmentid'] = "198101037979";
-   
+
         $s = false;
         $t = false;
 
@@ -259,9 +258,13 @@ class Paynova_Paynovapayment_IndexController extends Mage_Core_Controller_Front_
             $options[$i]['displayName'] = Mage::helper('paynovapayment')->__('Choose installment');
             $i++;
             foreach ($res as $robj) {
-                //var_dump($robj);
+
                 $options[$i]['productId'] = $robj->paymentMethodProductId;
                 $options[$i]['displayName'] = Mage::helper('paynovapayment')->__($robj->paymentMethodProductId.'_label');
+                if($options[$i]['displayName'] == $robj->paymentMethodProductId.'_label'){
+                    //No translation existed - use API information
+                    $options[$i]['displayName'] = $robj->displayName;
+                }
 
                 $legaloptions = array();
                 foreach ($robj->legalDocuments as $legaldocs) {
@@ -278,7 +281,13 @@ class Paynova_Paynovapayment_IndexController extends Mage_Core_Controller_Front_
                 $installmentPeriod = $robj->installmentPeriod;
                 $installmentUnit = $robj->installmentUnit;
                 $options[$i]['installmentText'] =   Mage::Helper('paynovapayment')->__($robj->paymentMethodProductId, $interestRate,$notificationFee,$setupFee,$nrInstallments,$installmentPeriod,$installmentUnit);
-
+                if( $options[$i]['installmentText'] == $robj->paymentMethodProductId){
+                    //No translation existed - use API information
+                    $text = $robj->setupFee->label." ".$setupFee;
+                    $text.=", ".strtolower($robj->interestRate->label)." ".$interestRate;
+                    $text.=", ".strtolower($robj->notificationFee->label)." ".$notificationFee;
+                    $options[$i]['installmentText'] = $text;
+                }
                 $i++;
             }
 

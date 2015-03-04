@@ -54,6 +54,17 @@ class Paynova_Paynovapayment_Helper_Data extends Mage_Payment_Helper_Data
         return $res;
     }
 
+    public function getShippingTaxPercentFromQuote($quote){
+
+
+        $store = $quote->getStore();
+        $taxCalculation = Mage::getModel('tax/calculation');
+        $request = $taxCalculation->getRateRequest(null, null, null, $store);
+        $taxRateId = Mage::getStoreConfig('tax/classes/shipping_tax_class', $store);
+
+        return $taxCalculation->getRate($request->setProductClassId($taxRateId));
+    }
+
     function log($loginfo,$type = NULL){
 
         if(Mage::getStoreConfig('paynovapayment/advanced_settings/debug_flag')==1 AND !empty($loginfo) ) {
