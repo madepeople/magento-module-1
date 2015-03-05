@@ -1,6 +1,6 @@
 ![Paynova logo](/../screenshots/paynova_logo_c0392b_50px.png?raw=true "Paynova logo")
 
-# Magento Payment Module v2.0.0-rc1
+# Magento Payment Module v2.0.0-rc2
 
 > This is Paynova's payment module for Magento. The module supports Magento 1.7 - 1.9. and is tested in Magento 1.9.1.0.
 
