@@ -29,16 +29,17 @@
         <span id="paynova_paynovapayment_installment_paymentmethodsoutput"></span><br>
         <span id="paynova_paynovapayment_installment_installmenttext"></span><br>
         <span id="paynova_paynovapayment_installment_paymentmethodseerror"></span>
+
+        <?php if ($this->showSsnInput()): ?>
         <?php echo Mage::helper('paynovapayment')->__('Enter social security no.') ?><br/><input type="text" name="payment[paynova_paynovapayment_installment_governmentid]" placeholder="YYYYMMDD-XXXX" id="paynova_paynovapayment_installment_governmentid" maxlength="13" size="13" class="input-text required-entry validate-paynova-paynovapayment-installment-governmentid validate-paynova-paynovapayment-installment-output" autocomplete="off" />
-        <input type="button" class="button" id="paynovapayment_continue"  name="paynovapayment_continue" value="<?php echo Mage::helper('paynovapayment')->__('Continue') ?>" onclick="paynova_paynovapayment_installment_getAddress(document.getElementById('paynova_paynovapayment_installment_governmentid').value)"  />
+            <input type="button" class="button" id="paynovapayment_continue"  name="paynovapayment_continue" value="<?php echo Mage::helper('paynovapayment')->__('Continue') ?>" onclick="paynova_paynovapayment_installment_getAddress(document.getElementById('paynova_paynovapayment_installment_governmentid').value)"  />
         <br/>
         <span id="paynova_paynovapayment_installment_installmentoptiontext"><?php echo Mage::helper('paynovapayment')->__('') ?></span>
 
         <span id="paynova_paynovapayment_installment_error"></span>
-
         <span id="paynova_paynovapayment_installment_output"></span>
-
         <span id="paynova_paynovapayment_installment_orderemail"></span>
+        <?php endif ?>
 
         <span id="paynova_paynovapayment_installment_terms"  style="display:none;"><a href="http://www.paynova.com" class="paynova-paynovapayment-installment-terms-link" id="paynova_paynovapayment_installment_terms_link"><?php echo Mage::helper('paynovapayment')->__('Terms for installment option')?></a></span>
         <br/>

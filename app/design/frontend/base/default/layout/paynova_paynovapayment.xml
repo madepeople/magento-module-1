@@ -67,4 +67,18 @@
             <block type="page/html" name="paynovapaymenthead_script" template="paynova/paynovapayment/paynovapaymenthead.phtml" />
         </reference>
     </firecheckout_index_index>
+
+    <streamcheckout_index_index>
+        <reference name="head">
+            <action method="addJs"><script>paynova/paynovapayment/jquery-1.11.1.min.js</script></action>
+            <action method="addJs"><script>paynova/paynovapayment/paynovapayment.js</script></action>
+            <block type="page/html" name="paynovapaymenthead_script" template="paynova/paynovapayment/paynovapaymenthead.phtml" />
+        </reference>
+
+        <reference name="billing_before">
+            <block type="core/template" name="paynova_installment" template="paynova/paynovapayment/before_billing_ssn.phtml"/>
+        </reference>
+
+    </streamcheckout_index_index>
+
 </layout>
