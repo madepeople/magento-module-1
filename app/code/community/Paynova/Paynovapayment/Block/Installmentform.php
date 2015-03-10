@@ -36,6 +36,19 @@ class Paynova_Paynovapayment_Block_Installmentform extends Mage_Payment_Block_Fo
     }
 
     /**
+     * Check if the ssn selector and button should be displayed
+     *
+     * For Made_Streamcheckout the ssn selector + button should not be
+     * displayed because they are shown over the billing address.
+     *
+     * @return bool
+     */
+    public function showSsnInput()
+    {
+        return !Mage::helper('paynovapayment')->isStreamcheckout();
+    }
+
+    /**
      * Return payment logo image src
      * LK: original function
      * @param string $payment Payment Code

@@ -26,6 +26,7 @@
 
 <ul class="form-list paynova_paynovapaymentmethod_<?php echo $_code ?>" id="payment_form_<?php echo $_code ?>" style="display:none">
     <li>
+        <?php if ($this->showSsnInput()): ?>
         <?php echo Mage::helper('paynovapayment')->__('Enter social security no.') ?><br/><input type="text" name="payment[paynova_paynovapayment_governmentid]" placeholder="YYYYMMDD-XXXX" id="paynova_paynovapayment_governmentid" maxlength="13" size="13" class="input-text required-entry validate-paynova-paynovapayment-governmentid validate-paynova-paynovapayment-output" autocomplete="off" />
         <input type="button" class="button" id="paynovapayment_continue"  name="paynovapayment_continue" value="<?php echo Mage::helper('paynovapayment')->__('Continue') ?>" onclick="paynova_paynovapayment_getAddress(document.getElementById('paynova_paynovapayment_governmentid').value)"  />
         <input type="hidden" name="payment[paynova_paynovapayment_paymentmethod]" value="DirectInvoice">
@@ -35,6 +36,7 @@
         <br/>
         <span id="paynova_paynovapayment_orderemail"></span>
         <br/>
+        <?php endif ?>
         <!--<span id="paynova_paynovapayment_paymentmethodsoutput"></span>
         <span id="paynova_paynovapayment_paymentmethodseerror"></span>-->
         <?php

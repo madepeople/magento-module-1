@@ -1,0 +1,60 @@
+<?php
+/**
+ * Paynova ssn input and button that can be placed over the billing address in
+ * the checkout.
+ *
+ * If this template is placed over the billing address
+ * Paynova_Paynovapayment_Block_Installmentform::showSsnInput() and
+ * Paynova_Paynovapayment_Block_Invoiceform::showSsnInput() should return
+ * false in order to prevent duplicates.
+ */
+?>
+<div id="before_billing_paynova_installment">
+    <?php echo Mage::helper('paynovapayment')->__('Enter social security no.') ?><br/><input type="text" name="payment[paynova_paynovapayment_installment_governmentid]" placeholder="YYYYMMDD-XXXX" id="paynova_paynovapayment_installment_governmentid" maxlength="13" size="13" class="input-text required-entry validate-paynova-paynovapayment-installment-governmentid validate-paynova-paynovapayment-installment-output" autocomplete="off" />
+    <input type="button" class="button" id="paynovapayment_continue"  name="paynovapayment_continue" value="<?php echo Mage::helper('paynovapayment')->__('Continue') ?>" onclick="paynova_paynovapayment_installment_getAddress(document.getElementById('paynova_paynovapayment_installment_governmentid').value)"  />
+    <br/>
+    <span id="paynova_paynovapayment_installment_installmentoptiontext"><?php echo Mage::helper('paynovapayment')->__('') ?></span>
+    <span id="paynova_paynovapayment_installment_error"></span>
+    <span id="paynova_paynovapayment_installment_output"></span>
+    <span id="paynova_paynovapayment_installment_orderemail"></span>
+</div>
+<div id="before_billing_paynova_invoice">
+    <?php echo Mage::helper('paynovapayment')->__('Enter social security no.') ?><br/><input type="text" name="payment[paynova_paynovapayment_governmentid]" placeholder="YYYYMMDD-XXXX" id="paynova_paynovapayment_governmentid" maxlength="13" size="13" class="input-text required-entry validate-paynova-paynovapayment-governmentid validate-paynova-paynovapayment-output" autocomplete="off" />
+    <input type="button" class="button" id="paynovapayment_continue"  name="paynovapayment_continue" value="<?php echo Mage::helper('paynovapayment')->__('Continue') ?>" onclick="paynova_paynovapayment_getAddress(document.getElementById('paynova_paynovapayment_governmentid').value)"  />
+    <input type="hidden" name="payment[paynova_paynovapayment_paymentmethod]" value="DirectInvoice">
+    <br/>
+    <span id="paynova_paynovapayment_error"></span>
+    <span id="paynova_paynovapayment_output"></span>
+    <br/>
+    <span id="paynova_paynovapayment_orderemail"></span>
+    <br/>
+</div>
+<script>
+    (function() {
+        function getSelectedPaymentMethodCode() {
+            return $$('input:checked[type=radio][name=payment[method]]')[0].value;
+        }
+
+        function toggleElements() {
+            var paymentMethodCode = getSelectedPaymentMethodCode();
+            if (paymentMethodCode === 'paynovapayment_invoice') {
+                $('before_billing_paynova_invoice').show();
+            } else {
+                $('before_billing_paynova_invoice').hide();
+            }
+            if (paymentMethodCode === 'paynovapayment_installment') {
+                $('before_billing_paynova_installment').show();
+            } else {
+                $('before_billing_paynova_installment').hide();
+            }
+        }
+
+        document.observe("dom:loaded", function() {
+            $('checkout:form').on('change',
+                                  '[name=payment[method]]',
+                                  toggleElements)
+            toggleElements();
+        });
+
+    })();
+</script>

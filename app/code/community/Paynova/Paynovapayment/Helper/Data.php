@@ -54,6 +54,17 @@ class Paynova_Paynovapayment_Helper_Data extends Mage_Payment_Helper_Data
         return $res;
     }
 
+    /**
+     * Check if the current request is for a Made_Streamcheckout checkout
+     *
+     * @return bool
+     */
+    public function isStreamcheckout()
+    {
+        return in_array('streamcheckout_index_index',
+                        Mage::app()->getLayout()->getUpdate()->getHandles());
+    }
+
     public function getShippingTaxPercentFromQuote($quote){
 
 
